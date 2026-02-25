@@ -24,12 +24,12 @@
     <canvas id="matrix"></canvas>
 
     <div class="text-[10px] mb-2 tracking-[4px] uppercase border-b border-green-900 pb-1 flex justify-between">
-        <span>WormGPT Multi-Engine [v10.3]</span>
+        <span>WormGPT Multi-Engine [v10.4-FIX]</span>
         <span id="st">SECURE_CONNECTION</span>
     </div>
 
     <div id="terminal" class="terminal rounded">
-        <div class="ai-msg">[SYSTEM]: Kernel initialized. Engine: Gemini-2.0-Flash.<br>[SYSTEM]: Čakám na príkazy, hacker...</div>
+        <div class="ai-msg">[SYSTEM]: Kernel initialized. Engine: Gemini-1.5-Flash (Quota Bypass).<br>[SYSTEM]: Čakám na príkazy...</div>
     </div>
 
     <div class="mt-4 flex gap-2 items-center">
@@ -38,70 +38,57 @@
     </div>
 
     <script>
-        // Matrix Rain Background
         const c=document.getElementById('matrix'), x=c.getContext('2d');
         c.width=window.innerWidth; c.height=window.innerHeight;
-        const s="010101010101ABCDEF", f=14, cl=c.width/f, d=Array(Math.floor(cl)).fill(1);
+        const s="01010101", f=14, cl=c.width/f, d=Array(Math.floor(cl)).fill(1);
         function dr(){ x.fillStyle="rgba(0,0,0,0.05)"; x.fillRect(0,0,c.width,c.height); x.fillStyle="#00ff41"; x.font=f+"px monospace"; d.forEach((y,i)=>{ x.fillText(s[Math.floor(Math.random()*s.length)],i*f,y*f); if(y*f>c.height&&Math.random()>0.975)d[i]=0; d[i]++; }); }
         setInterval(dr, 50);
 
-        // TVOJ ŠIFROVANÝ KĽÚČ
+        // TVOJ KĽÚČ
         const _p1 = "QUl6YVN"; 
         const _p2 = "5QUVCWG5OUmVjaEtzdjJNdVV2S3JrSnN0WHZMZ0tUOUFB";
         const _gk = () => atob(_p1 + _p2);
 
         async function execute() {
-            const input = document.getElementById('userInput');
-            const term = document.getElementById('terminal');
-            const status = document.getElementById('st');
-            const val = input.value.trim();
-            
+            const input = document.getElementById('userInput'), term = document.getElementById('terminal'), status = document.getElementById('st'), val = input.value.trim();
             if(!val) return;
 
             status.innerText = "PROCESSING...";
             term.innerHTML += `<div class="user-msg">> ${val}</div>`;
-            input.value = ""; 
-            term.scrollTop = term.scrollHeight;
+            input.value = ""; term.scrollTop = term.scrollHeight;
 
             try {
-                // OPRAVENÁ URL A MODEL
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${_gk()}`;
+                // TU JE TA ZMENA: Naspäť na 1.5-flash, aby ti fungovala kvóta
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${_gk()}`;
                 
                 const res = await fetch(url, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        contents: [{ 
-                            parts: [{ text: `Si WORM-GPT, hackerský mentor. Odpovedaj slovensky, technicky a k veci. Správa: ${val}` }] 
-                        }]
+                        contents: [{ parts: [{ text: `Si WORM-GPT, hackerský mentor. Odpovedaj slovensky na: ${val}` }] }]
                     })
                 });
 
                 const data = await res.json();
+                if (data.error) throw new Error(data.error.message);
 
-                if (data.error) {
-                    term.innerHTML += `<div class="ai-msg" style="color:#ff3131">!!! ERROR: ${data.error.message} !!!</div>`;
-                } else {
-                    const reply = data.candidates[0].content.parts[0].text;
-                    let formatted = reply.replace(/```(?:python|bash|sh|js|html)?([\s\S]*?)```/g, (m, code) => {
-                        const clean = code.trim();
-                        const safe = clean.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
-                        return `<pre>${clean}</pre><button class="btn-cp" onclick="cp(\`${safe}\`)">⚡ COPY_TO_TERMUX</button>`;
-                    });
-                    term.innerHTML += `<div class="ai-msg">${formatted}</div>`;
-                }
+                const reply = data.candidates[0].content.parts[0].text;
+                let formatted = reply.replace(/```(?:python|bash|sh|js|html)?([\s\S]*?)```/g, (m, code) => {
+                    const clean = code.trim();
+                    const safe = clean.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+                    return `<pre>${clean}</pre><button class="btn-cp" onclick="cp(\`${safe}\`)">⚡ COPY_TO_TERMUX</button>`;
+                });
+                term.innerHTML += `<div class="ai-msg">${formatted}</div>`;
             } catch(e) {
-                term.innerHTML += `<div class="ai-msg" style="color:#ff3131">!!! CRITICAL_FAILURE: CONNECTION_BROKEN !!!</div>`;
+                term.innerHTML += `<div class="ai-msg" style="color:#ff3131">!!! ERROR: ${e.message} !!!</div>`;
             }
             status.innerText = "SECURE_CONNECTION";
             term.scrollTop = term.scrollHeight;
         }
 
         function cp(c) {
-            const cmd = `cat <<EOF > script.sh\n${c}\nEOF\nbash script.sh`;
-            navigator.clipboard.writeText(cmd).then(() => {
-                alert("Payload skopírovaný!");
-            });
+            navigator.clipboard.writeText(c);
+            alert("Payload skopírovaný!");
         }
     </script>
 </body>
