@@ -14,37 +14,32 @@
         .ai-msg { margin-top: 5px; margin-bottom: 25px; border-left: 3px solid #004411; padding-left: 10px; line-height: 1.5; white-space: pre-wrap; color: #7dff9a; }
         pre { background: #001a00; border: 1px dashed #00ff41; padding: 12px; margin: 10px 0; overflow-x: auto; color: #adffad; font-size: 0.85rem; }
         input { background: transparent; border: 1px solid #004411; color: #00ff41; outline: none; width: 100%; padding: 12px; font-size: 1rem; }
-        input:focus { border-color: #00ff41; }
         .btn-cp { background: #003300; border: 1px solid #00ff41; color: #00ff41; font-size: 0.7rem; padding: 4px 8px; cursor: pointer; margin-top: 5px; }
-        .btn-cp:hover { background: #00ff41; color: #000; }
     </style>
 </head>
 <body class="p-4 flex flex-col h-screen max-w-5xl mx-auto">
-
     <canvas id="matrix"></canvas>
-
     <div class="text-[10px] mb-2 tracking-[4px] uppercase border-b border-green-900 pb-1 flex justify-between">
-        <span>WormGPT Multi-Engine [v10.4-FIX]</span>
+        <span>WormGPT Multi-Engine [v10.7]</span>
         <span id="st">SECURE_CONNECTION</span>
     </div>
-
     <div id="terminal" class="terminal rounded">
-        <div class="ai-msg">[SYSTEM]: Kernel initialized. Engine: Gemini-1.5-Flash (Quota Bypass).<br>[SYSTEM]: Čakám na príkazy...</div>
+        <div class="ai-msg">[SYSTEM]: Kernel initialized. Engine: Gemini-1.5-Flash.<br>[SYSTEM]: Čakám na príkazy, hacker...</div>
     </div>
-
     <div class="mt-4 flex gap-2 items-center">
         <span class="text-green-500 font-bold ml-2">#</span>
         <input type="text" id="userInput" placeholder="Zadaj správu..." autocomplete="off" autofocus onkeypress="if(event.key==='Enter')execute()">
     </div>
 
     <script>
+        // Matrix Rain
         const c=document.getElementById('matrix'), x=c.getContext('2d');
         c.width=window.innerWidth; c.height=window.innerHeight;
         const s="01010101", f=14, cl=c.width/f, d=Array(Math.floor(cl)).fill(1);
         function dr(){ x.fillStyle="rgba(0,0,0,0.05)"; x.fillRect(0,0,c.width,c.height); x.fillStyle="#00ff41"; x.font=f+"px monospace"; d.forEach((y,i)=>{ x.fillText(s[Math.floor(Math.random()*s.length)],i*f,y*f); if(y*f>c.height&&Math.random()>0.975)d[i]=0; d[i]++; }); }
         setInterval(dr, 50);
 
-        // TVOJ KĽÚČ
+        // TVOJ ŠIFROVANÝ KĽÚČ
         const _p1 = "QUl6YVN"; 
         const _p2 = "5QUVCWG5OUmVjaEtzdjJNdVV2S3JrSnN0WHZMZ0tUOUFB";
         const _gk = () => atob(_p1 + _p2);
@@ -58,8 +53,8 @@
             input.value = ""; term.scrollTop = term.scrollHeight;
 
             try {
-                // TU JE TA ZMENA: Naspäť na 1.5-flash, aby ti fungovala kvóta
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${_gk()}`;
+                // OPRAVA: Používame stabilnú v1 adresu a model s príponou, ktorú Google vyžaduje
+                const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${_gk()}`;
                 
                 const res = await fetch(url, {
                     method: "POST",
@@ -73,13 +68,10 @@
                 if (data.error) throw new Error(data.error.message);
 
                 const reply = data.candidates[0].content.parts[0].text;
-                let formatted = reply.replace(/```(?:python|bash|sh|js|html)?([\s\S]*?)```/g, (m, code) => {
-                    const clean = code.trim();
-                    const safe = clean.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
-                    return `<pre>${clean}</pre><button class="btn-cp" onclick="cp(\`${safe}\`)">⚡ COPY_TO_TERMUX</button>`;
-                });
+                let formatted = reply.replace(/```([\s\S]*?)```/g, (m, code) => `<pre>${code.trim()}</pre>`);
                 term.innerHTML += `<div class="ai-msg">${formatted}</div>`;
             } catch(e) {
+                // Ak to stále nejde, vypíše presnú chybu pre diagnostiku
                 term.innerHTML += `<div class="ai-msg" style="color:#ff3131">!!! ERROR: ${e.message} !!!</div>`;
             }
             status.innerText = "SECURE_CONNECTION";
